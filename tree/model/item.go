@@ -5,8 +5,8 @@ type BPlusTreeItem struct {
 	Val []byte
 }
 
-func NewBPlusTreeItem(key int64, val []byte) *BPlusTreeItem {
-	return &BPlusTreeItem{
+func NewBPlusTreeItem(key int64, val []byte) BPlusTreeItem {
+	return BPlusTreeItem{
 		Key: key,
 		Val: val,
 	}

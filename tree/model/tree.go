@@ -43,7 +43,33 @@ func (tree *BPlusTree) Query(key int64) (bool, []byte) {
 	return false, nil
 }
 
-func (tree *BPlusTree) Insert(key int64) (bool, []byte) {
+func (tree *BPlusTree) Insert(key int64, value []byte) bool {
+	tree.mutex.Lock()
+	defer tree.mutex.Unlock()
+}
+
+func (tree *BPlusTree) insertValue(parent *BPlusTreeNode, node *BPlusTreeNode, key int64, value []byte) {
+	for i := 0; i < len(node.Nodes); i++ {
+		if key <= node.Nodes[i].MaxKey || i == len(node.Nodes)-1 {
+			tree.insertValue(node, node.Nodes[i], key, value)
+			break
+		}
+	}
+
+	// leaf node
+	if len(node.Nodes) < 1 {
+		node.insertValue(key, value)
+	}
+
+	newNode := tree.splitNode(node)
+	if newNode != nil {
+		if nil == parent {
+			parent = NewBPlusTreeNode(tree.width)
+			parent.addChild(node)
+			tree.root = parent
+		}
+		parent.addChild(newNode)
+	}
 
 }
 
