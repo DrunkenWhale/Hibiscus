@@ -20,14 +20,14 @@ func TestWriteLeafBlockFromDiskByBlockID(t *testing.T) {
 		NewKV(514, []byte("114")),
 		NewKV(114514, []byte("1919810")),
 	})
-	err := WriteLeafBlockFromDiskByBlockID("test", leaf, 0)
+	err := WriteLeafBlockFromDiskByBlockID("test", leaf)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestReadLeafBlockFromDiskByBlockID(t *testing.T) {
-	leaf, err := ReadLeafBlockFromDiskByBlockID("test", 0)
+	leaf, err := ReadLeafBlockFromDiskByBlockID("test", 1)
 	if err != nil {
 		t.Fatal(err)
 	}

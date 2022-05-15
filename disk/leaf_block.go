@@ -87,7 +87,10 @@ func ReadLeafBlockFromDiskByBlockID(filename string, blockID int64) (*LeafBlock,
 		panic(err)
 		return nil, err
 	}
-
+	if int64(id_) != (blockID) {
+		panic("Illegal Block ID")
+		return nil, nil
+	}
 	readString, err = buf.ReadString(byteSep)
 	if err != nil {
 		panic(err)
@@ -159,14 +162,14 @@ func ReadLeafBlockFromDiskByBlockID(filename string, blockID int64) (*LeafBlock,
 		byteSep, kvs), nil
 }
 
-func WriteLeafBlockFromDiskByBlockID(filename string, leaf *LeafBlock, blockID int64) error {
+func WriteLeafBlockFromDiskByBlockID(filename string, leaf *LeafBlock) error {
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
 		panic(err)
 		return err
 	}
 	defer file.Close()
-	offset := blockID * blockSize
+	offset := leaf.id * blockSize
 	_, err = file.WriteAt(leaf.ToBytes(), offset)
 	if err != nil {
 		panic(err)
@@ -174,3 +177,9 @@ func WriteLeafBlockFromDiskByBlockID(filename string, leaf *LeafBlock, blockID i
 	}
 	return nil
 }
+
+func splitLeafNodeBlock(leaf *LeafBlock) {
+
+}
+
+func nextLeafNodeBlock() {}
