@@ -30,7 +30,7 @@ func NewLeafBlock(
 }
 
 func (leaf *LeafBlock) ToBytes() []byte {
-	if len(leaf.kvs) > leafMaxSize {
+	if len(leaf.kvs) > blockSize {
 		panic("Too much Key Value Pair")
 	}
 	bytes := make([]byte, blockSize)
@@ -49,5 +49,5 @@ func (leaf *LeafBlock) ToBytes() []byte {
 	if len(bytes) > blockSize {
 		panic("Node Size Too Large")
 	}
-	return bytes
+	return bytes[:4096]
 }

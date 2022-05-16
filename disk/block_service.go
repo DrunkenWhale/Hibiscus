@@ -7,17 +7,17 @@ import (
 )
 
 const (
-	blockSize   = 4096
-	leafMaxSize = 30
+	blockSize            = 4096
+	leafNodeBlockMaxSize = 30
 
-	byteSep       = 3
+	byteSep       = 32
 	byteSepString = string(rune(byteSep))
 
 	leafNodeDataStoragePrefix     = "leaf_"
 	leafLeakNodeDataStoragePrefix = "free_"
 )
 
-func ReadLeafBlockFromDiskByBlockID(tableName string, blockID int64) (*LeafBlock, error) {
+func ReadLeafBlockFromDiskByBlockID(blockID int64, tableName string) (*LeafBlock, error) {
 	file, err := os.OpenFile(leafNodeDataStoragePrefix+tableName, os.O_RDONLY, 0777)
 	if err != nil {
 		panic(err)
@@ -108,7 +108,7 @@ func ReadLeafBlockFromDiskByBlockID(tableName string, blockID int64) (*LeafBlock
 		kvs), nil
 }
 
-func WriteLeafBlockFromDiskByBlockID(tableName string, leaf *LeafBlock) error {
+func WriteLeafBlockFromDiskByBlockID(leaf *LeafBlock, tableName string) error {
 	file, err := os.OpenFile(leafNodeDataStoragePrefix+tableName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
@@ -130,7 +130,7 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	newLeaf.nextBlockID = leaf.nextBlockID
 	leaf.nextBlockID = newBlockID
 	bound := leaf.kvsSize / 2
-	newLeafKVS := make([]*KV, leafMaxSize)
+	newLeafKVS := make([]*KV, leafNodeBlockMaxSize+1)
 	for i := bound; i < leaf.kvsSize; i++ {
 		newLeafKVS[i-bound] = leaf.kvs[i]
 		leaf.kvs[i] = nil
@@ -157,7 +157,7 @@ func nextOrderBlockID(tableName string) int64 {
 	if err != nil {
 		panic(err)
 	}
-	nextBlockID_ := (stat.Size() / blockSize) + 1
+	nextBlockID_ := stat.Size() / blockSize
 	return nextBlockID_
 }
 
