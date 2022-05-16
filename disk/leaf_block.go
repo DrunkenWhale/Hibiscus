@@ -148,3 +148,46 @@ func (leaf *LeafBlock) Update(key int64, value []byte) bool {
 	}
 	return false
 }
+
+func (leaf *LeafBlock) Delete(key int64) bool {
+	if len(leaf.kvs) == 0 {
+		return false
+	}
+	if key < leaf.kvs[0].Key || key > leaf.maxKey {
+		return false
+	}
+	left := int64(0)
+	right := leaf.kvsSize
+	for left < right {
+		mid := (right + left) >> 1
+		if leaf.kvs[mid].Key == key {
+			if leaf.maxKey == key {
+				if mid == 0 {
+					leaf.maxKey = -1
+				} else {
+					leaf.maxKey = leaf.kvs[mid-1].Key
+				}
+			}
+			leaf.kvsSize--
+			leaf.kvs = append(leaf.kvs[:mid], leaf.kvs[mid+1:]...)
+			return true
+		} else if leaf.kvs[mid].Key > key {
+			right = mid
+		} else {
+			left = mid + 1
+		}
+	}
+	if leaf.kvs[left].Key == key {
+		if leaf.maxKey == key {
+			if left == 0 {
+				leaf.maxKey = -1
+			} else {
+				leaf.maxKey = leaf.kvs[left-1].Key
+			}
+		}
+		leaf.kvsSize--
+		leaf.kvs = append(leaf.kvs[:left], leaf.kvs[left+1:]...)
+		return true
+	}
+	return false
+}
