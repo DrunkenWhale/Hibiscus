@@ -14,6 +14,7 @@ func TestReadIndexBlockFromDiskByBlockID(t *testing.T) {
 	for _, ki := range index.kis {
 		t.Log(ki)
 	}
+
 }
 
 func TestSplitIndexNodeBlock(t *testing.T) {
@@ -22,8 +23,12 @@ func TestSplitIndexNodeBlock(t *testing.T) {
 		NewKI(17, 3),
 		NewKI(16, 4),
 	})
+	err := WriteIndexBlockToDiskByBlockID(index, "test")
+	if err != nil {
+		t.Log(err)
+	}
 	index1, index2 := SplitIndexNodeBlock(index, "test")
-	err := WriteIndexBlockToDiskByBlockID(index1, "test")
+	err = WriteIndexBlockToDiskByBlockID(index1, "test")
 	if err != nil {
 		t.Log(err)
 	}
@@ -49,5 +54,14 @@ func TestIndexBlock_Put(t *testing.T) {
 }
 
 func TestIndexBlock_Get(t *testing.T) {
-
+	index, err := ReadIndexBlockFromDiskByBlockID(1, "test")
+	if err != nil {
+		t.Log(err)
+	}
+	fmt.Println(index)
+	for _, i := range index.kis {
+		fmt.Println(i)
+		index.Get(i.Key)
+		fmt.Println(index.Get(i.Key))
+	}
 }

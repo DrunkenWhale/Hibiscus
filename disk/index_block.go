@@ -10,7 +10,7 @@ type IndexBlock struct {
 	id           int64
 	parent       int64
 	childrenSize int64
-	kis          []*KI
+	KIs          []*KI
 }
 
 func NewIndexBlock(id int64, parent int64, childrenSize int64, kis []*KI) *IndexBlock {
@@ -18,7 +18,7 @@ func NewIndexBlock(id int64, parent int64, childrenSize int64, kis []*KI) *Index
 		id:           id,
 		parent:       parent,
 		childrenSize: childrenSize,
-		kis:          kis,
+		KIs:          kis,
 	}
 }
 
@@ -33,7 +33,7 @@ func (index *IndexBlock) ToBytes() []byte {
 			strconv.FormatInt(index.parent, 10)+byteSepString+
 			strconv.FormatInt(index.childrenSize, 10)+byteSepString,
 	)...)
-	for _, ki := range index.kis {
+	for _, ki := range index.KIs {
 		if ki == nil {
 			break
 		}
@@ -54,8 +54,8 @@ func (index *IndexBlock) isRoot() bool {
 // false => Key exist
 // true  => operation succeed
 func (index *IndexBlock) Put(key int64, offset int64) bool {
-	if len(index.kis) == 0 {
-		index.kis = append(index.kis, NewKI(key, offset))
+	if len(index.KIs) == 0 {
+		index.KIs = append(index.KIs, NewKI(key, offset))
 		index.childrenSize++
 		return true
 	}
@@ -63,17 +63,25 @@ func (index *IndexBlock) Put(key int64, offset int64) bool {
 	right := index.childrenSize
 	for left < right {
 		mid := (right + left) >> 1
-		if index.kis[mid].Key == key {
-			return false // Key exist
-		} else if index.kis[mid].Key > key {
+		if index.KIs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	index.kis = append(index.kis, nil)
-	copy(index.kis[left+1:], index.kis[left:])
-	index.kis[left] = NewKI(key, offset)
+	if left == index.childrenSize {
+		index.KIs = append(index.KIs, NewKI(key, offset))
+		index.childrenSize++
+		return true
+	}
+
+	if index.KIs[left].Key == key {
+		// key index exist
+		return false
+	}
+	index.KIs = append(index.KIs, nil)
+	copy(index.KIs[left+1:], index.KIs[left:])
+	index.KIs[left] = NewKI(key, offset)
 	index.childrenSize++
 	return true
 }
@@ -83,23 +91,24 @@ func (index *IndexBlock) Put(key int64, offset int64) bool {
 // true  ,data => query data succeed, return data in second return data
 // false ,nil  => query data failed, Key not existed
 func (index *IndexBlock) Get(key int64) (bool, int64) {
-	if len(index.kis) == 0 {
+	if len(index.KIs) == 0 {
 		return false, -1
 	}
 	left := int64(0)
 	right := index.childrenSize
 	for left < right {
 		mid := (right + left) >> 1
-		if index.kis[mid].Key == key {
-			return true, index.kis[mid].Index
-		} else if index.kis[mid].Key > key {
+		if index.KIs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if index.kis[left].Key == key {
-		return true, index.kis[left].Index
+	if left == index.childrenSize {
+		return false, -1
+	}
+	if index.KIs[left].Key == key {
+		return true, index.KIs[left].Index
 	}
 	return false, -1
 }
@@ -109,53 +118,52 @@ func (index *IndexBlock) Get(key int64) (bool, int64) {
 // false => Update failed, Key unexist
 // ture  => Update succeed
 func (index *IndexBlock) Update(key int64, offset int64) bool {
-	if len(index.kis) == 0 {
+	if len(index.KIs) == 0 {
 		return false
 	}
 	left := int64(0)
 	right := index.childrenSize
 	for left < right {
 		mid := (right + left) >> 1
-		if index.kis[mid].Key == key {
-			index.kis[mid].Index = offset
-			return true
-		} else if index.kis[mid].Key > key {
+		if index.KIs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if index.kis[left].Key == key {
-		index.kis[left].Index = offset
+	if left == index.childrenSize {
+		return false
+	}
+	if index.KIs[left].Key == key {
+		index.KIs[left].Index = offset
 		return true
 	}
 	return false
 }
 
 func (index *IndexBlock) Delete(key int64) bool {
-	if len(index.kis) == 0 {
+	if len(index.KIs) == 0 {
 		return false
 	}
-	if key < index.kis[0].Key {
+	if key < index.KIs[0].Key {
 		return false
 	}
 	left := int64(0)
 	right := index.childrenSize
 	for left < right {
 		mid := (right + left) >> 1
-		if index.kis[mid].Key == key {
-			index.childrenSize--
-			index.kis = append(index.kis[:mid], index.kis[mid+1:]...)
-			return true
-		} else if index.kis[mid].Key > key {
+		if index.KIs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if index.kis[left].Key == key {
+	if left == index.childrenSize {
+		return false
+	}
+	if index.KIs[left].Key == key {
 		index.childrenSize--
-		index.kis = append(index.kis[:left], index.kis[left+1:]...)
+		index.KIs = append(index.KIs[:left], index.KIs[left+1:]...)
 		return true
 	}
 	return false
@@ -180,7 +188,6 @@ func WriteIndexBlockToDiskByBlockID(index *IndexBlock, tableName string) error {
 func ReadIndexBlockFromDiskByBlockID(blockID int64, tableName string) (*IndexBlock, error) {
 	file, err := os.OpenFile(indexNodeDataStoragePrefix+tableName, os.O_RDONLY, 0777)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 	defer file.Close()
@@ -270,10 +277,10 @@ func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *Ind
 	bound := index.childrenSize / 2
 	newIndexKIS := make([]*KI, indexChildrenMaxSize+1)
 	for i := bound; i < index.childrenSize; i++ {
-		newIndexKIS[i-bound] = index.kis[i]
-		index.kis[i] = nil
+		newIndexKIS[i-bound] = index.KIs[i]
+		index.KIs[i] = nil
 	}
-	newIndex.kis = newIndexKIS
+	newIndex.KIs = newIndexKIS
 	newIndex.childrenSize = index.childrenSize - bound
 	index.childrenSize = bound
 	return index, newIndex

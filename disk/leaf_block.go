@@ -19,7 +19,7 @@ type LeafBlock struct {
 	nextBlockID int64
 	parentIndex int64
 	kvsSize     int64
-	kvs         []*KV
+	KVs         []*KV
 }
 
 func NewLeafBlock(
@@ -34,7 +34,7 @@ func NewLeafBlock(
 		maxKey:      maxKey,
 		nextBlockID: nextBlockID,
 		kvsSize:     kvsSize,
-		kvs:         kvs,
+		KVs:         kvs,
 		parentIndex: -1,
 	}
 }
@@ -54,7 +54,7 @@ func (leaf *LeafBlock) ToBytes() []byte {
 		strconv.FormatInt(leaf.parentIndex, 10)+byteSepString+
 		strconv.FormatInt(leaf.kvsSize, 10)+byteSepString,
 	)...)
-	for _, kv := range leaf.kvs {
+	for _, kv := range leaf.KVs {
 		if kv == nil {
 			break
 		}
@@ -71,8 +71,8 @@ func (leaf *LeafBlock) ToBytes() []byte {
 // false => Key exist
 // true  => operation succeed
 func (leaf *LeafBlock) Put(key int64, value []byte) bool {
-	if len(leaf.kvs) == 0 {
-		leaf.kvs = append(leaf.kvs, NewKV(key, value))
+	if len(leaf.KVs) == 0 {
+		leaf.KVs = append(leaf.KVs, NewKV(key, value))
 		leaf.kvsSize++
 		leaf.maxKey = key
 		return true
@@ -81,18 +81,23 @@ func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 	right := leaf.kvsSize
 	for left < right {
 		mid := (right + left) >> 1
-		if leaf.kvs[mid].Key == key {
-			return false // Key exist
-		} else if leaf.kvs[mid].Key > key {
+		if leaf.KVs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
 	index := left
-	leaf.kvs = append(leaf.kvs, nil)
-	copy(leaf.kvs[index+1:], leaf.kvs[index:])
-	leaf.kvs[index] = NewKV(key, value)
+	if left == leaf.kvsSize {
+		leaf.KVs = append(leaf.KVs, NewKV(key, value))
+	} else if leaf.KVs[index].Key == key {
+		// key exist
+		return false
+	} else {
+		leaf.KVs = append(leaf.KVs, nil)
+		copy(leaf.KVs[index+1:], leaf.KVs[index:])
+		leaf.KVs[index] = NewKV(key, value)
+	}
 	if key > leaf.maxKey {
 		leaf.maxKey = key
 	}
@@ -105,26 +110,27 @@ func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 // true  ,data => query data succeed, return data in second return data
 // false ,nil  => query data failed, Key not existed
 func (leaf *LeafBlock) Get(key int64) (bool, []byte) {
-	if len(leaf.kvs) == 0 {
+	if len(leaf.KVs) == 0 {
 		return false, nil
 	}
-	if key < leaf.kvs[0].Key || key > leaf.maxKey {
+	if key < leaf.KVs[0].Key || key > leaf.maxKey {
 		return false, nil
 	}
 	left := int64(0)
 	right := leaf.kvsSize
 	for left < right {
 		mid := (right + left) >> 1
-		if leaf.kvs[mid].Key == key {
-			return true, leaf.kvs[mid].Value
-		} else if leaf.kvs[mid].Key > key {
+		if leaf.KVs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if leaf.kvs[left].Key == key {
-		return true, leaf.kvs[left].Value
+	if left == leaf.kvsSize {
+		return false, nil
+	}
+	if leaf.KVs[left].Key == key {
+		return true, leaf.KVs[left].Value
 	}
 	return false, nil
 }
@@ -134,70 +140,62 @@ func (leaf *LeafBlock) Get(key int64) (bool, []byte) {
 // false => Update failed, Key unexist
 // ture  => Update succeed
 func (leaf *LeafBlock) Update(key int64, value []byte) bool {
-	if len(leaf.kvs) == 0 {
+	if len(leaf.KVs) == 0 {
 		return false
 	}
-	if key < leaf.kvs[0].Key || key > leaf.maxKey {
+	if key < leaf.KVs[0].Key || key > leaf.maxKey {
 		return false
 	}
 	left := int64(0)
 	right := leaf.kvsSize
 	for left < right {
 		mid := (right + left) >> 1
-		if leaf.kvs[mid].Key == key {
-			leaf.kvs[mid].Value = value
-			return true
-		} else if leaf.kvs[mid].Key > key {
+		if leaf.KVs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if leaf.kvs[left].Key == key {
-		leaf.kvs[left].Value = value
+	if left == leaf.kvsSize {
+		return false
+	}
+	if leaf.KVs[left].Key == key {
+		leaf.KVs[left].Value = value
 		return true
 	}
 	return false
 }
 
 func (leaf *LeafBlock) Delete(key int64) bool {
-	if len(leaf.kvs) == 0 {
+	if len(leaf.KVs) == 0 {
 		return false
 	}
-	if key < leaf.kvs[0].Key || key > leaf.maxKey {
+	if key < leaf.KVs[0].Key || key > leaf.maxKey {
 		return false
 	}
 	left := int64(0)
 	right := leaf.kvsSize
 	for left < right {
 		mid := (right + left) >> 1
-		if leaf.kvs[mid].Key == key {
-			if leaf.maxKey == key {
-				if mid == 0 {
-					leaf.maxKey = -1
-				} else {
-					leaf.maxKey = leaf.kvs[mid-1].Key
-				}
-			}
-			leaf.kvsSize--
-			leaf.kvs = append(leaf.kvs[:mid], leaf.kvs[mid+1:]...)
-			return true
-		} else if leaf.kvs[mid].Key > key {
+		if leaf.KVs[mid].Key >= key {
 			right = mid
 		} else {
 			left = mid + 1
 		}
 	}
-	if leaf.kvs[left].Key == key {
+	if left == leaf.kvsSize {
+		return false
+	}
+	if leaf.KVs[left].Key == key {
 		if leaf.maxKey == key {
 			if left == 0 {
 				leaf.maxKey = -1
 			} else {
-				leaf.maxKey = leaf.kvs[left-1].Key
+				leaf.maxKey = leaf.KVs[left-1].Key
 			}
 		}
 		leaf.kvsSize--
-		leaf.kvs = append(leaf.kvs[:left], leaf.kvs[left+1:]...)
+		leaf.KVs = append(leaf.KVs[:left], leaf.KVs[left+1:]...)
 		return true
 	}
 	return false
@@ -331,12 +329,12 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	bound := leaf.kvsSize / 2
 	newLeafKVS := make([]*KV, leafNodeBlockMaxSize+1)
 	for i := bound; i < leaf.kvsSize; i++ {
-		newLeafKVS[i-bound] = leaf.kvs[i]
-		leaf.kvs[i] = nil
+		newLeafKVS[i-bound] = leaf.KVs[i]
+		leaf.KVs[i] = nil
 	}
 	newLeaf.maxKey = leaf.maxKey
-	leaf.maxKey = leaf.kvs[bound-1].Key
-	newLeaf.kvs = newLeafKVS
+	leaf.maxKey = leaf.KVs[bound-1].Key
+	newLeaf.KVs = newLeafKVS
 	newLeaf.kvsSize = leaf.kvsSize - bound
 	leaf.kvsSize = bound
 	return leaf, newLeaf
