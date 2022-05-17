@@ -1,6 +1,7 @@
-package disk
+package test
 
 import (
+	"Hibiscus/disk"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -8,16 +9,16 @@ import (
 )
 
 func TestLeafBlock_ToBytes(t *testing.T) {
-	leaf := NewLeafBlock(1, 77, 0, 3, []*KV{
-		NewKV(114, []byte("514")),
-		NewKV(514, []byte("114")),
-		NewKV(114514, []byte("1919810")),
+	leaf := disk.NewLeafBlock(1, 77, 0, 3, []*disk.KV{
+		disk.NewKV(114, []byte("514")),
+		disk.NewKV(514, []byte("114")),
+		disk.NewKV(114514, []byte("1919810")),
 	})
 	fmt.Println(string(leaf.ToBytes()))
 }
 
 func TestLeafBlock_Put(t *testing.T) {
-	leaf := NewLeafBlock(1, -1, 1, 0, []*KV{})
+	leaf := disk.NewLeafBlock(1, -1, 1, 0, []*disk.KV{})
 	for _, num := range rand.Perm(31) {
 		leaf.Put(int64(num), []byte(strconv.Itoa(num)))
 	}
@@ -26,7 +27,7 @@ func TestLeafBlock_Put(t *testing.T) {
 
 func TestLeafBlock_Get(t *testing.T) {
 
-	leaf := NewLeafBlock(1, -1, 1, 0, []*KV{})
+	leaf := disk.NewLeafBlock(1, -1, 1, 0, []*disk.KV{})
 	for _, num := range rand.Perm(31) {
 		leaf.Put(int64(num), []byte(strconv.Itoa(num)))
 	}
@@ -38,7 +39,7 @@ func TestLeafBlock_Get(t *testing.T) {
 }
 
 func TestLeafBlock_Update(t *testing.T) {
-	leaf := NewLeafBlock(1, -1, 1, 0, []*KV{})
+	leaf := disk.NewLeafBlock(1, -1, 1, 0, []*disk.KV{})
 	for _, num := range rand.Perm(31) {
 		leaf.Put(int64(num), []byte(strconv.Itoa(num)))
 	}

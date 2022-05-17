@@ -1,16 +1,17 @@
-package disk
+package test
 
 import (
+	"Hibiscus/disk"
 	"strconv"
 	"testing"
 )
 
 func TestNewBPTree(t *testing.T) {
-	_ = NewBPTree("test")
+	_ = disk.NewBPTree("test")
 }
 
 func TestBPTree_Insert(t *testing.T) {
-	tree := NewBPTree("test")
+	tree := disk.NewBPTree("test")
 	for i := 0; i < 27; i++ {
 		err := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 		if err != nil {
