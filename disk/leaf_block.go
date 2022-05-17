@@ -68,7 +68,7 @@ func (leaf *LeafBlock) ToBytes() []byte {
 
 // Put
 // return :
-// false => key exist
+// false => Key exist
 // true  => operation succeed
 func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 	if len(leaf.kvs) == 0 {
@@ -82,7 +82,7 @@ func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 	for left < right {
 		mid := (right + left) >> 1
 		if leaf.kvs[mid].Key == key {
-			return false // key exist
+			return false // Key exist
 		} else if leaf.kvs[mid].Key > key {
 			right = mid
 		} else {
@@ -103,7 +103,7 @@ func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 // Get
 // return :
 // true  ,data => query data succeed, return data in second return data
-// false ,nil  => query data failed, key not existed
+// false ,nil  => query data failed, Key not existed
 func (leaf *LeafBlock) Get(key int64) (bool, []byte) {
 	if len(leaf.kvs) == 0 {
 		return false, nil
@@ -131,7 +131,7 @@ func (leaf *LeafBlock) Get(key int64) (bool, []byte) {
 
 //Update
 //return :
-// false => Update failed, key unexist
+// false => Update failed, Key unexist
 // ture  => Update succeed
 func (leaf *LeafBlock) Update(key int64, value []byte) bool {
 	if len(leaf.kvs) == 0 {

@@ -3,21 +3,20 @@ package disk
 import "strconv"
 
 type KI struct {
-	key   int64
-	index int64
+	Key   int64
+	Index int64
 }
 
 func NewKI(key int64, index int64) *KI {
 	return &KI{
-		key:   key,
-		index: index,
+		Key:   key,
+		Index: index,
 	}
 }
 
 func (ki *KI) ToBytes() []byte {
 	return []byte(
-		strconv.FormatInt(ki.key, 10) +
-			byteSepString +
-			strconv.FormatInt(ki.index, 10),
+		strconv.FormatInt(ki.Key, 10) + byteSepString +
+			strconv.FormatInt(ki.Index, 10) + byteSepString,
 	)
 }
