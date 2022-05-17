@@ -10,11 +10,12 @@ const (
 	blockSize            = 4096
 	leafNodeBlockMaxSize = 30
 
-	byteSep       = 32
+	byteSep       = 3
 	byteSepString = string(rune(byteSep))
 
-	leafNodeDataStoragePrefix     = "leaf_"
-	leafLeakNodeDataStoragePrefix = "free_"
+	leafNodeDataStoragePrefix  = "leaf_"
+	leakNodeDataStoragePrefix  = "free_"
+	indexNodeDataStoragePrefix = "index_"
 )
 
 func ReadLeafBlockFromDiskByBlockID(blockID int64, tableName string) (*LeafBlock, error) {
@@ -125,7 +126,7 @@ func WriteLeafBlockFromDiskByBlockID(leaf *LeafBlock, tableName string) error {
 }
 
 func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlock) {
-	newBlockID := NextBlockID(tableName)
+	newBlockID := NextLeafNodeBlockID(tableName)
 	newLeaf := NewLeafBlock(newBlockID, 0, 0, 0, nil)
 	newLeaf.nextBlockID = leaf.nextBlockID
 	leaf.nextBlockID = newBlockID
@@ -143,16 +144,16 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	return leaf, newLeaf
 }
 
-func NextBlockID(tableName string) int64 {
-	num := nextLeakBlockID(tableName)
+func NextLeafNodeBlockID(tableName string) int64 {
+	num := nextLeakDataBlockID(tableName)
 	if num == -1 {
-		return nextOrderBlockID(tableName)
+		return nextLeafDataOrderBlockID(tableName)
 	} else {
 		return num
 	}
 }
 
-func nextOrderBlockID(tableName string) int64 {
+func nextLeafDataOrderBlockID(tableName string) int64 {
 	stat, err := os.Stat(leafNodeDataStoragePrefix + tableName)
 	if err != nil {
 		panic(err)
@@ -161,8 +162,8 @@ func nextOrderBlockID(tableName string) int64 {
 	return nextBlockID_
 }
 
-func nextLeakBlockID(tableName string) int64 {
-	file, err := os.OpenFile(leafLeakNodeDataStoragePrefix+tableName, os.O_CREATE|os.O_RDWR, 0666)
+func nextLeakDataBlockID(tableName string) int64 {
+	file, err := os.OpenFile(leakNodeDataStoragePrefix+tableName, os.O_CREATE|os.O_RDWR, 0666)
 	defer file.Close()
 	if err != nil {
 		panic(err)

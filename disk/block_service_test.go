@@ -6,7 +6,7 @@ import (
 )
 
 func TestNextBlockID(t *testing.T) {
-	t.Log(NextBlockID("test"))
+	t.Log(NextLeafNodeBlockID("test"))
 }
 
 func TestWriteLeafBlockFromDiskByBlockID(t *testing.T) {
