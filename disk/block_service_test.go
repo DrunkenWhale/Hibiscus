@@ -9,7 +9,7 @@ func TestNextBlockID(t *testing.T) {
 	t.Log(NextLeafNodeBlockID("test"))
 }
 
-func TestWriteLeafBlockFromDiskByBlockID(t *testing.T) {
+func TestWriteLeafBlockToDiskByBlockID(t *testing.T) {
 	leaf := NewLeafBlock(0, 77, -1, 3, []*KV{
 		NewKV(114, []byte("514")),
 		NewKV(514, []byte("114")),
@@ -39,7 +39,7 @@ func TestWriteLeafBlockFromDiskByBlockID(t *testing.T) {
 		NewKV(114514, []byte("1919810")),
 		NewKV(114514, []byte("1919810")),
 	})
-	err := WriteLeafBlockFromDiskByBlockID(leaf, "test")
+	err := WriteLeafBlockToDiskByBlockID(leaf, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,11 +66,11 @@ func TestSplitLeafNodeBlock(t *testing.T) {
 		NewKV(114514, []byte("1919a810")),
 	})
 	leaf1, leaf2 := SplitLeafNodeBlock(leaf, "test")
-	err := WriteLeafBlockFromDiskByBlockID(leaf1, "test")
+	err := WriteLeafBlockToDiskByBlockID(leaf1, "test")
 	if err != nil {
 		t.Error(err)
 	}
-	err = WriteLeafBlockFromDiskByBlockID(leaf2, "test")
+	err = WriteLeafBlockToDiskByBlockID(leaf2, "test")
 	if err != nil {
 		t.Error(err)
 	}
@@ -78,11 +78,11 @@ func TestSplitLeafNodeBlock(t *testing.T) {
 
 func TestBlockReadAndWrite(t *testing.T) {
 	kvs := make([]*KV, 0)
-	for i := 0; i <= 31; i++ {
+	for i := 1; i <= 30; i++ {
 		kvs = append(kvs, NewKV(int64(i), []byte(strconv.Itoa(i))))
 	}
-	l := NewLeafBlock(0, 31, -1, 32, kvs)
-	err := WriteLeafBlockFromDiskByBlockID(l, "test")
+	l := NewLeafBlock(0, 30, -1, 30, kvs)
+	err := WriteLeafBlockToDiskByBlockID(l, "test")
 	if err != nil {
 		t.Log(err)
 	}
@@ -91,11 +91,11 @@ func TestBlockReadAndWrite(t *testing.T) {
 		t.Error(err)
 	}
 	leaf1, leaf2 := SplitLeafNodeBlock(leaf, "test")
-	err = WriteLeafBlockFromDiskByBlockID(leaf1, "test")
+	err = WriteLeafBlockToDiskByBlockID(leaf1, "test")
 	if err != nil {
 		t.Error(err)
 	}
-	err = WriteLeafBlockFromDiskByBlockID(leaf2, "test")
+	err = WriteLeafBlockToDiskByBlockID(leaf2, "test")
 	if err != nil {
 		t.Error(err)
 	}
