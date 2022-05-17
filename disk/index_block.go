@@ -49,13 +49,21 @@ func (index *IndexBlock) isRoot() bool {
 	return index.id == -1
 }
 
+func (index *IndexBlock) isFull() bool {
+	return index.childrenSize > indexChildrenMaxSize
+}
+
+func (index *IndexBlock) hasChildren() bool {
+	return index.childrenSize != 0
+}
+
 // Put
 // return :
 // false => Key exist
 // true  => operation succeed
-func (index *IndexBlock) Put(key int64, offset int64) bool {
+func (index *IndexBlock) Put(key int64, blockID int64) bool {
 	if len(index.KIs) == 0 {
-		index.KIs = append(index.KIs, NewKI(key, offset))
+		index.KIs = append(index.KIs, NewKI(key, blockID))
 		index.childrenSize++
 		return true
 	}
@@ -70,7 +78,7 @@ func (index *IndexBlock) Put(key int64, offset int64) bool {
 		}
 	}
 	if left == index.childrenSize {
-		index.KIs = append(index.KIs, NewKI(key, offset))
+		index.KIs = append(index.KIs, NewKI(key, blockID))
 		index.childrenSize++
 		return true
 	}
@@ -81,7 +89,7 @@ func (index *IndexBlock) Put(key int64, offset int64) bool {
 	}
 	index.KIs = append(index.KIs, nil)
 	copy(index.KIs[left+1:], index.KIs[left:])
-	index.KIs[left] = NewKI(key, offset)
+	index.KIs[left] = NewKI(key, blockID)
 	index.childrenSize++
 	return true
 }
@@ -268,11 +276,7 @@ func ReadIndexBlockFromDiskByBlockID(blockID int64, tableName string) (*IndexBlo
 }
 
 func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *IndexBlock) {
-	stat, err := os.Stat(indexNodeDataStoragePrefix + tableName)
-	if err != nil {
-		panic(err)
-	}
-	nextBlockID := stat.Size() / blockSize
+	nextBlockID := NextIndexNodeBlockID(tableName)
 	newIndex := NewIndexBlock(nextBlockID, index.parent, 0, nil)
 	bound := index.childrenSize / 2
 	newIndexKIS := make([]*KI, indexChildrenMaxSize+1)
@@ -284,4 +288,12 @@ func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *Ind
 	newIndex.childrenSize = index.childrenSize - bound
 	index.childrenSize = bound
 	return index, newIndex
+}
+
+func NextIndexNodeBlockID(tableName string) int64 {
+	stat, err := os.Stat(indexNodeDataStoragePrefix + tableName)
+	if err != nil {
+		panic(err)
+	}
+	return stat.Size() / blockSize
 }
