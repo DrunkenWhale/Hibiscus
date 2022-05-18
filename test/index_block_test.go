@@ -19,7 +19,7 @@ func TestReadIndexBlockFromDiskByBlockID(t *testing.T) {
 }
 
 func TestSplitIndexNodeBlock(t *testing.T) {
-	index := disk.NewIndexBlock(0, 2, 3, []*disk.KI{
+	index := disk.NewIndexBlock(0, 1, 2, 3, []*disk.KI{
 		disk.NewKI(10, 2),
 		disk.NewKI(17, 3),
 		disk.NewKI(16, 4),
@@ -40,7 +40,7 @@ func TestSplitIndexNodeBlock(t *testing.T) {
 }
 
 func TestIndexBlock_Put(t *testing.T) {
-	index := disk.NewIndexBlock(0, -1, 3, []*disk.KI{
+	index := disk.NewIndexBlock(0, 1, -1, 3, []*disk.KI{
 		disk.NewKI(10, 2),
 		disk.NewKI(17, 3),
 		disk.NewKI(16, 4),
@@ -48,7 +48,7 @@ func TestIndexBlock_Put(t *testing.T) {
 	fmt.Println(index.Put(114, 514))
 	fmt.Println(index.Put(0, 514))
 	fmt.Println(index)
-	index_ := disk.NewIndexBlock(0, -1, 0, make([]*disk.KI, 0))
+	index_ := disk.NewIndexBlock(0, 1, -1, 0, make([]*disk.KI, 0))
 	fmt.Println(index_.Put(114, 514))
 	fmt.Println(index_)
 

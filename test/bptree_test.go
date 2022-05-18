@@ -12,10 +12,8 @@ func TestNewBPTree(t *testing.T) {
 
 func TestBPTree_Insert(t *testing.T) {
 	tree := disk.NewBPTree("test")
-	for i := 0; i < 27; i++ {
-		err := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
-		if err != nil {
-			t.Error(err)
-		}
+	tree.Insert(114, []byte("514"))
+	for i := 1; i < 2700; i++ {
+		tree.Insert(int64(i+114), []byte(strconv.Itoa(i)))
 	}
 }

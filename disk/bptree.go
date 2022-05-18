@@ -12,12 +12,12 @@ func NewBPTree(name string) *BPTree {
 		// block id equals zero
 		// its parent will always pointer to root index node
 		err := WriteIndexBlockToDiskByBlockID(
-			NewIndexBlock(0, 1, 0, make([]*KI, 0)),
+			NewIndexBlock(0, 0, 1, 0, make([]*KI, 0)),
 			name)
 		if err != nil {
 			panic(err)
 		}
-		index_ := NewIndexBlock(1, -1, 0, make([]*KI, 0))
+		index_ := NewIndexBlock(1, 1, -1, 0, make([]*KI, 0))
 		err = WriteIndexBlockToDiskByBlockID(
 			index_,
 			name)
@@ -46,7 +46,7 @@ func NewBPTree(name string) *BPTree {
 
 func (tree *BPTree) Insert(key int64, value []byte) bool {
 	cursor := tree.root
-	if cursor.childrenSize == 0 {
+	if cursor.isLeafIndex() {
 		// has no any index
 		leaf, err := ReadLeafBlockFromDiskByBlockID(0, tree.name)
 		if err != nil {
@@ -55,12 +55,65 @@ func (tree *BPTree) Insert(key int64, value []byte) bool {
 		}
 		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
 	} else {
-
+		leaf := tree.searchLeafNode(key)
+		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
 	}
 }
 
-func (tree *BPTree) searchLeafNode(key int64) (bool, []byte) {
+func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
+	cursor := tree.root
+	for !cursor.isLeafIndex() {
+		rightBound := searchRightBound(key, cursor)
+		if rightBound == -1 {
+			panic("?")
+			return nil
+		}
+		ok, nextBlockID := cursor.Get(rightBound)
+		if !ok {
+			return nil
+		}
+		index, err := ReadIndexBlockFromDiskByBlockID(nextBlockID, tree.name)
+		if err != nil {
+			panic(err)
+			return nil
+		}
+		cursor = index
+	}
+	rightBound := searchRightBound(key, cursor)
+	if rightBound == -1 {
+		return nil
+	} else {
+		ok, nextBoundID := cursor.Get(rightBound)
+		if !ok {
+			panic(ok)
+		}
+		leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
+		if err != nil {
+			panic(err)
+			return nil
+		}
+		return leaf
+	}
+}
 
+func searchRightBound(key int64, index *IndexBlock) int64 {
+	if len(index.KIs) == 0 {
+		return -1
+	}
+	left := int64(0)
+	right := index.childrenSize
+	for left < right {
+		mid := (left + right) >> 1
+		if index.KIs[mid].Key <= key {
+			left = mid + 1
+		} else {
+			right = mid
+		}
+	}
+	if left == 0 {
+		return -1
+	}
+	return left - 1
 }
 
 func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *LeafBlock) bool {
@@ -85,14 +138,8 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 			panic(err)
 			return false
 		}
-		ok := tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf1.id, index)
-		if !ok {
-			return false
-		}
-		ok = tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf2.id, index)
-		if !ok {
-			return false
-		}
+		tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf1.id, index)
+		tree.insertIntoIndexNodeAndWrite(leaf2.maxKey, leaf2.id, index)
 		return true
 	} else {
 		err := WriteLeafBlockToDiskByBlockID(leaf, tree.name)
@@ -109,10 +156,15 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 	if !ok {
 		return false
 	}
+	err := WriteIndexBlockToDiskByBlockID(index, tree.name)
+	if err != nil {
+		panic(err)
+		return false
+	}
 	for index.isFull() {
 		index1, index2 := SplitIndexNodeBlock(index, tree.name)
 		if index.isRoot() {
-			newRoot := NewIndexBlock(NextIndexNodeBlockID(tree.name), -1, 0, make([]*KI, 0))
+			newRoot := NewIndexBlock(NextIndexNodeBlockID(tree.name), 0, -1, 0, make([]*KI, 0))
 			index1.parent = newRoot.id
 			index2.parent = newRoot.id
 			newRoot.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
@@ -167,7 +219,7 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 }
 
 func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
-	root := NewIndexBlock(0, newRootIndex.id, 0, make([]*KI, 0))
+	root := NewIndexBlock(0, 0, newRootIndex.id, 0, make([]*KI, 0))
 	err := WriteIndexBlockToDiskByBlockID(root, tree.name)
 	if err != nil {
 		panic(err)

@@ -6,16 +6,23 @@ import (
 	"strconv"
 )
 
+const (
+	indexChildrenMaxSize       = 114
+	indexNodeDataStoragePrefix = "data/index_"
+)
+
 type IndexBlock struct {
 	id           int64
+	isLeaf       int64
 	parent       int64
 	childrenSize int64
 	KIs          []*KI
 }
 
-func NewIndexBlock(id int64, parent int64, childrenSize int64, kis []*KI) *IndexBlock {
+func NewIndexBlock(id int64, isLeaf int64, parent int64, childrenSize int64, kis []*KI) *IndexBlock {
 	return &IndexBlock{
 		id:           id,
+		isLeaf:       isLeaf,
 		parent:       parent,
 		childrenSize: childrenSize,
 		KIs:          kis,
@@ -30,6 +37,7 @@ func (index *IndexBlock) ToBytes() []byte {
 	bytes = bytes[0:0]
 	bytes = append(bytes, []byte(
 		strconv.FormatInt(index.id, 10)+byteSepString+
+			strconv.FormatInt(index.isLeaf, 10)+byteSepString+
 			strconv.FormatInt(index.parent, 10)+byteSepString+
 			strconv.FormatInt(index.childrenSize, 10)+byteSepString,
 	)...)
@@ -53,8 +61,8 @@ func (index *IndexBlock) isFull() bool {
 	return index.childrenSize > indexChildrenMaxSize
 }
 
-func (index *IndexBlock) hasChildren() bool {
-	return index.childrenSize != 0
+func (index *IndexBlock) isLeafIndex() bool {
+	return index.isLeaf == 1
 }
 
 // Put
@@ -228,6 +236,16 @@ func ReadIndexBlockFromDiskByBlockID(blockID int64, tableName string) (*IndexBlo
 		panic(err)
 		return nil, err
 	}
+	isLeaf, err := strconv.Atoi(readString[:len(readString)-1])
+	if err != nil {
+		panic(err)
+		return nil, err
+	}
+	readString, err = buf.ReadString(byteSep)
+	if err != nil {
+		panic(err)
+		return nil, err
+	}
 	parent, err := strconv.Atoi(readString[:len(readString)-1])
 	if err != nil {
 		panic(err)
@@ -270,6 +288,7 @@ func ReadIndexBlockFromDiskByBlockID(blockID int64, tableName string) (*IndexBlo
 	}
 	return NewIndexBlock(
 		int64(id_),
+		int64(isLeaf),
 		int64(parent),
 		int64(childrenSize),
 		kis), nil
@@ -277,7 +296,7 @@ func ReadIndexBlockFromDiskByBlockID(blockID int64, tableName string) (*IndexBlo
 
 func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *IndexBlock) {
 	nextBlockID := NextIndexNodeBlockID(tableName)
-	newIndex := NewIndexBlock(nextBlockID, index.parent, 0, nil)
+	newIndex := NewIndexBlock(nextBlockID, index.isLeaf, index.parent, 0, nil)
 	bound := index.childrenSize / 2
 	newIndexKIS := make([]*KI, indexChildrenMaxSize+1)
 	for i := bound; i < index.childrenSize; i++ {

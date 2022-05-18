@@ -8,8 +8,8 @@ import (
 
 const (
 	leafNodeBlockMaxSize      = 30
-	leafNodeDataStoragePrefix = "leaf_"
-	leakNodeDataStoragePrefix = "free_"
+	leafNodeDataStoragePrefix = "data/leaf_"
+	leakNodeDataStoragePrefix = "data/free_"
 )
 
 type LeafBlock struct {
