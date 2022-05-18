@@ -68,10 +68,8 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 			panic("?")
 			return nil
 		}
-		ok, nextBlockID := cursor.Get(rightBound)
-		if !ok {
-			return nil
-		}
+
+		nextBlockID := cursor.KIs[rightBound].Index
 		index, err := ReadIndexBlockFromDiskByBlockID(nextBlockID, tree.name)
 		if err != nil {
 			panic(err)
@@ -83,10 +81,7 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	if rightBound == -1 {
 		return nil
 	} else {
-		ok, nextBoundID := cursor.Get(rightBound)
-		if !ok {
-			panic(ok)
-		}
+		nextBoundID := cursor.KIs[rightBound].Index
 		leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
 		if err != nil {
 			panic(err)
@@ -224,7 +219,7 @@ func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
 	if err != nil {
 		panic(err)
 	}
-	tree.root = root
+	tree.root = newRootIndex
 }
 
 func (tree *BPTree) getRootNode() int64 {

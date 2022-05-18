@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	indexChildrenMaxSize       = 114
+	indexChildrenMaxSize       = 50
 	indexNodeDataStoragePrefix = "data/index_"
 )
 
@@ -30,7 +30,7 @@ func NewIndexBlock(id int64, isLeaf int64, parent int64, childrenSize int64, kis
 }
 
 func (index *IndexBlock) ToBytes() []byte {
-	if index.childrenSize > indexChildrenMaxSize {
+	if index.childrenSize > indexChildrenMaxSize+1 {
 		panic("Too much Key Index Pair")
 	}
 	bytes := make([]byte, blockSize)
@@ -50,11 +50,11 @@ func (index *IndexBlock) ToBytes() []byte {
 	if len(bytes) > blockSize {
 		panic("Index Node Size Too Large")
 	}
-	return bytes[:4096]
+	return bytes[:blockSize]
 }
 
 func (index *IndexBlock) isRoot() bool {
-	return index.id == -1
+	return index.parent == -1
 }
 
 func (index *IndexBlock) isFull() bool {

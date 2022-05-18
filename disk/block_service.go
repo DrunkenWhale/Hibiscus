@@ -3,7 +3,7 @@ package disk
 import "os"
 
 const (
-	blockSize = 4096
+	blockSize = 4096 / 8
 
 	byteSep       = 3
 	byteSepString = string(rune(byteSep))

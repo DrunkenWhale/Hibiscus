@@ -63,7 +63,7 @@ func (leaf *LeafBlock) ToBytes() []byte {
 	if len(bytes) > blockSize {
 		panic("Leaf Node Size Too Large")
 	}
-	return bytes[:4096]
+	return bytes[:blockSize]
 }
 
 // Put
