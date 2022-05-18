@@ -9,7 +9,6 @@ import (
 const (
 	leafNodeBlockMaxSize      = 30
 	leafNodeDataStoragePrefix = "data/leaf_"
-	leakNodeDataStoragePrefix = "data/free_"
 )
 
 type LeafBlock struct {
@@ -340,50 +339,72 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	return leaf, newLeaf
 }
 
-func NextLeafNodeBlockID(tableName string) int64 {
-	num := nextLeakDataBlockID(tableName)
-	if num == -1 {
-		return nextLeafDataOrderBlockID(tableName)
-	} else {
-		return num
-	}
-}
-
-func nextLeafDataOrderBlockID(tableName string) int64 {
-	stat, err := os.Stat(leafNodeDataStoragePrefix + tableName)
-	if err != nil {
-		panic(err)
-	}
-	nextBlockID_ := stat.Size() / blockSize
-	return nextBlockID_
-}
-
-func nextLeakDataBlockID(tableName string) int64 {
-	file, err := os.OpenFile(leakNodeDataStoragePrefix+tableName, os.O_CREATE|os.O_RDWR, 0666)
-	defer file.Close()
-	if err != nil {
-		panic(err)
-	}
-	stat, err := file.Stat()
-	if err != nil {
-		panic(stat)
-	}
-	if stat.Size() < 1 {
-		return -1
-	}
-	bytes := make([]byte, 8)
-	_, err = file.ReadAt(bytes, stat.Size()-8)
-	if err != nil {
-		panic(err)
-	}
-	err = file.Truncate(stat.Size() - 8)
-	if err != nil {
-		panic(err)
-	}
-
-	num, err := strconv.ParseInt(string(bytes), 16, 64)
-	if err != nil {
-		panic(err)
-	}
-	return num
-}
+//func NextLeafNodeBlockID(tableName string) int64 {
+//	num := nextLeakDataBlockID(tableName)
+//	if num == -1 {
+//		return nextLeafDataOrderBlockID(tableName)
+//	} else {
+//		return num
+//	}
+//}
+//
+//func nextLeafDataOrderBlockID(tableName string) int64 {
+//
+//	file, err := os.OpenFile(leakNodeDataStoragePrefix+tableName, os.O_CREATE|os.O_RDWR, 0666)
+//	defer file.Close()
+//	if err != nil {
+//		panic(err)
+//	}
+//	stat, err := file.Stat()
+//	if err != nil {
+//		panic(stat)
+//	}
+//	if stat.Size() < 1 {
+//		return -1
+//	}
+//	bytes := make([]byte, 8)
+//	_, err = file.ReadAt(bytes, stat.Size()-8)
+//	if err != nil {
+//		panic(err)
+//	}
+//	err = file.Truncate(stat.Size() - 8)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	num, err := strconv.ParseInt(string(bytes), 16, 64)
+//	if err != nil {
+//		panic(err)
+//	}
+//	return num
+//}
+//
+//func nextLeakDataBlockID(tableName string) int64 {
+//	file, err := os.OpenFile(leakNodeDataStoragePrefix+tableName, os.O_CREATE|os.O_RDWR, 0666)
+//	defer file.Close()
+//	if err != nil {
+//		panic(err)
+//	}
+//	stat, err := file.Stat()
+//	if err != nil {
+//		panic(stat)
+//	}
+//	if stat.Size() < 1 {
+//		return -1
+//	}
+//	bytes := make([]byte, 8)
+//	_, err = file.ReadAt(bytes, stat.Size()-8)
+//	if err != nil {
+//		panic(err)
+//	}
+//	err = file.Truncate(stat.Size() - 8)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	num, err := strconv.ParseInt(string(bytes), 16, 64)
+//	if err != nil {
+//		panic(err)
+//	}
+//	return num
+//}

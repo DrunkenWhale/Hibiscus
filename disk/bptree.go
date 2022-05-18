@@ -6,7 +6,9 @@ type BPTree struct {
 }
 
 func NewBPTree(name string) *BPTree {
-	index, err := ReadIndexBlockFromDiskByBlockID(1, name)
+	index, err := ReadIndexBlockFromDiskByBlockID(0, name)
+
+	// root node unexist
 	if err != nil {
 
 		// block id equals zero
@@ -32,16 +34,31 @@ func NewBPTree(name string) *BPTree {
 		if err != nil {
 			panic(err)
 		}
+		meta := &TableMeta{
+			tableName:        name,
+			nextLeafBlockID:  1,
+			nextIndexBlockID: 2,
+		}
+		meta.WriteTableMeta()
 		return &BPTree{
 			name: name,
 			root: index_,
 		}
 	} else {
+		rootNode, err := ReadIndexBlockFromDiskByBlockID(index.parent, name)
+		if err != nil {
+			panic(err)
+			return nil
+		}
 		return &BPTree{
 			name: name,
-			root: index,
+			root: rootNode,
 		}
 	}
+}
+
+func (tree *BPTree) Query(key int64) (bool, []byte) {
+	return false, nil
 }
 
 func (tree *BPTree) Insert(key int64, value []byte) bool {
@@ -63,7 +80,7 @@ func (tree *BPTree) Insert(key int64, value []byte) bool {
 func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	cursor := tree.root
 	for !cursor.isLeafIndex() {
-		rightBound := searchRightBound(key, cursor)
+		rightBound := searchRightBoundFromIndexNode(key, cursor)
 		if rightBound == -1 {
 			panic("?")
 			return nil
@@ -77,7 +94,7 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 		}
 		cursor = index
 	}
-	rightBound := searchRightBound(key, cursor)
+	rightBound := searchRightBoundFromIndexNode(key, cursor)
 	if rightBound == -1 {
 		return nil
 	} else {
@@ -91,7 +108,7 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	}
 }
 
-func searchRightBound(key int64, index *IndexBlock) int64 {
+func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
 	if len(index.KIs) == 0 {
 		return -1
 	}
@@ -222,8 +239,8 @@ func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
 	tree.root = newRootIndex
 }
 
-func (tree *BPTree) getRootNode() int64 {
-	index, err := ReadIndexBlockFromDiskByBlockID(0, tree.name)
+func getRootNode(tableName string) int64 {
+	index, err := ReadIndexBlockFromDiskByBlockID(0, tableName)
 	if err != nil {
 		panic(err)
 	}

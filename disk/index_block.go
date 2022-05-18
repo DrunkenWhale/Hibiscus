@@ -308,11 +308,3 @@ func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *Ind
 	index.childrenSize = bound
 	return index, newIndex
 }
-
-func NextIndexNodeBlockID(tableName string) int64 {
-	stat, err := os.Stat(indexNodeDataStoragePrefix + tableName)
-	if err != nil {
-		panic(err)
-	}
-	return stat.Size() / blockSize
-}
