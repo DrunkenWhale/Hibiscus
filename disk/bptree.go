@@ -58,7 +58,13 @@ func NewBPTree(name string) *BPTree {
 }
 
 func (tree *BPTree) Query(key int64) (bool, []byte) {
-	return false, nil
+	leaf := tree.searchLeafNode(key)
+	ok, res := leaf.Get(key)
+	if !ok {
+		return false, nil
+	} else {
+		return true, res
+	}
 }
 
 func (tree *BPTree) Insert(key int64, value []byte) bool {
@@ -82,7 +88,7 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	for !cursor.isLeafIndex() {
 		rightBound := searchRightBoundFromIndexNode(key, cursor)
 		if rightBound == -1 {
-			panic("?")
+			panic("bug occurred")
 			return nil
 		}
 
@@ -96,16 +102,16 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	}
 	rightBound := searchRightBoundFromIndexNode(key, cursor)
 	if rightBound == -1 {
+		panic("there must be a bug!")
 		return nil
-	} else {
-		nextBoundID := cursor.KIs[rightBound].Index
-		leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
-		if err != nil {
-			panic(err)
-			return nil
-		}
-		return leaf
 	}
+	nextBoundID := cursor.KIs[rightBound].Index
+	leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
+	if err != nil {
+		panic(err)
+		return nil
+	}
+	return leaf
 }
 
 func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
@@ -116,16 +122,16 @@ func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
 	right := index.childrenSize
 	for left < right {
 		mid := (left + right) >> 1
-		if index.KIs[mid].Key <= key {
+		if index.KIs[mid].Key < key {
 			left = mid + 1
 		} else {
 			right = mid
 		}
 	}
-	if left == 0 {
-		return -1
+	if left == int64(len(index.KIs)) {
+		return left - 1
 	}
-	return left - 1
+	return left
 }
 
 func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *LeafBlock) bool {
@@ -218,6 +224,7 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 				panic(err)
 				return false
 			}
+			index_.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
 			index_.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
 			err = WriteIndexBlockToDiskByBlockID(index_, tree.name)
 			if err != nil {

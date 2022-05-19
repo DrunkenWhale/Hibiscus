@@ -30,7 +30,7 @@ func NewIndexBlock(id int64, isLeaf int64, parent int64, childrenSize int64, kis
 }
 
 func (index *IndexBlock) ToBytes() []byte {
-	if index.childrenSize > indexChildrenMaxSize+1 {
+	if index.childrenSize > indexChildrenMaxSize+2 {
 		panic("Too much Key Index Pair")
 	}
 	bytes := make([]byte, blockSize)
@@ -41,11 +41,18 @@ func (index *IndexBlock) ToBytes() []byte {
 			strconv.FormatInt(index.parent, 10)+byteSepString+
 			strconv.FormatInt(index.childrenSize, 10)+byteSepString,
 	)...)
+
+	count := int64(0)
+
 	for _, ki := range index.KIs {
 		if ki == nil {
 			break
 		}
+		count++
 		bytes = append(bytes, ki.ToBytes()...)
+	}
+	if count != index.childrenSize {
+		panic("Unmatched")
 	}
 	if len(bytes) > blockSize {
 		panic("Index Node Size Too Large")
@@ -303,8 +310,9 @@ func SplitIndexNodeBlock(index *IndexBlock, tableName string) (*IndexBlock, *Ind
 		newIndexKIS[i-bound] = index.KIs[i]
 		index.KIs[i] = nil
 	}
-	newIndex.KIs = newIndexKIS
+	newIndex.KIs = newIndexKIS[:(index.childrenSize - bound)]
 	newIndex.childrenSize = index.childrenSize - bound
 	index.childrenSize = bound
+	index.KIs = index.KIs[:index.childrenSize]
 	return index, newIndex
 }

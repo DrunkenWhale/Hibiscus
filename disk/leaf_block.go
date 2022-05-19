@@ -53,11 +53,16 @@ func (leaf *LeafBlock) ToBytes() []byte {
 		strconv.FormatInt(leaf.parentIndex, 10)+byteSepString+
 		strconv.FormatInt(leaf.kvsSize, 10)+byteSepString,
 	)...)
+	count := int64(0)
 	for _, kv := range leaf.KVs {
 		if kv == nil {
 			break
 		}
+		count++
 		bytes = append(bytes, kv.ToBytes()...)
+	}
+	if count != leaf.kvsSize {
+		panic("Unmatch")
 	}
 	if len(bytes) > blockSize {
 		panic("Leaf Node Size Too Large")
@@ -327,6 +332,7 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	leaf.nextBlockID = newBlockID
 	bound := leaf.kvsSize / 2
 	newLeafKVS := make([]*KV, leafNodeBlockMaxSize+1)
+
 	for i := bound; i < leaf.kvsSize; i++ {
 		newLeafKVS[i-bound] = leaf.KVs[i]
 		leaf.KVs[i] = nil
