@@ -67,6 +67,20 @@ func (tree *BPTree) Query(key int64) (bool, []byte) {
 	}
 }
 
+func (tree *BPTree) QueryAll() []*KV {
+	res := make([]*KV, 0)
+	nextBoundID := int64(0)
+	for nextBoundID != -1 {
+		leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
+		if err != nil {
+			panic(err)
+		}
+		res = append(res, leaf.KVs...)
+		nextBoundID = leaf.nextBlockID
+	}
+	return res
+}
+
 func (tree *BPTree) Insert(key int64, value []byte) bool {
 	cursor := tree.root
 	if cursor.isLeafIndex() {

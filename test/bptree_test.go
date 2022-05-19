@@ -15,19 +15,45 @@ func TestNewBPTree(t *testing.T) {
 func TestBPTree_Insert(t *testing.T) {
 	tree := disk.NewBPTree("test")
 	tree.Insert(114, []byte("514"))
-	//for i := 0; i < 1145; i++ {
-	//	ok := tree.Insert(int64(i+617), []byte(strconv.Itoa(i)))
-	//	if !ok {
-	//		fmt.Println(i)
-	//	}
-	//}
-	for _, i := range rand.Perm(450000) {
-		ok := tree.Insert(int64(i+617), []byte(strconv.Itoa(i)))
+	for i := 0; i < 1145; i++ {
+		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 		if !ok {
 			fmt.Println(i)
 		}
 	}
+	//for _, i := range rand.Perm(500) {
+	//	ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+	//	if !ok {
+	//		fmt.Println(i)
+	//	}
+	//}
 	return
+}
+
+func TestBPTree_Query(t *testing.T) {
+	tree := disk.NewBPTree("test")
+	for i := 0; i < 1145; i++ {
+		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+		if !ok {
+			fmt.Println(i)
+		}
+	}
+	for _, i := range rand.Perm(500) {
+		ok, res := tree.Query(int64(i))
+		if !ok {
+			t.Error("can't find key " + strconv.Itoa(i))
+		} else {
+			t.Log(i, string(res))
+		}
+	}
+	return
+}
+
+func TestBPTree_QueryAll(t *testing.T) {
+	tree := disk.NewBPTree("test")
+	for _, kv := range tree.QueryAll() {
+		t.Log(kv.Key, string(kv.Value))
+	}
 }
 
 func TestBinarySearch(t *testing.T) {
