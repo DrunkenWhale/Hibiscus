@@ -35,7 +35,7 @@ func TestBPTree_Query(t *testing.T) {
 	for i := 0; i < 1145; i++ {
 		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 		if !ok {
-			fmt.Println(i)
+			t.Log(i)
 		}
 	}
 	for _, i := range rand.Perm(500) {
@@ -51,14 +51,7 @@ func TestBPTree_Query(t *testing.T) {
 
 func TestBPTree_QueryAll(t *testing.T) {
 	tree := disk.NewBPTree("test")
-	//
-	//for i := 0; i < 1145; i++ {
-	//	ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
-	//	if !ok {
-	//		fmt.Println(i)
-	//	}
-	//}
-	for _, i := range rand.Perm(5000) {
+	for _, i := range rand.Perm(900) {
 		tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 	}
 	for _, kv := range tree.QueryAll() {

@@ -172,6 +172,13 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 			panic(err)
 			return false
 		}
+		oldKey := tree.getIndexKeyByOffsetID(leaf1.id, index)
+		index.Delete(oldKey)
+		err = WriteIndexBlockToDiskByBlockID(index, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
 		tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf1.id, index)
 		tree.insertIntoIndexNodeAndWrite(leaf2.maxKey, leaf2.id, index)
 		if index.isRoot() {
@@ -192,6 +199,15 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 
 //TODO 调整索引 使得maxKey更新的时候会更新索引
 func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index *IndexBlock) bool {
+	if len(index.KIs) == 0 {
+		index.Put(key, blockID)
+		err := WriteIndexBlockToDiskByBlockID(index, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		return true
+	}
 	ok := index.Put(key, blockID)
 	if !ok {
 		return false
@@ -201,32 +217,19 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 		panic(err)
 		return false
 	}
-	for index.isFull() {
-		index1, index2 := SplitIndexNodeBlock(index, tree.name)
-		if index.isRoot() {
-			newRoot := NewIndexBlock(NextIndexNodeBlockID(tree.name), 0, -1, 0, make([]*KI, 0))
-			index1.parent = newRoot.id
-			index2.parent = newRoot.id
-			newRoot.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
-			newRoot.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
-			tree.setRootNode(newRoot)
-			err := WriteIndexBlockToDiskByBlockID(newRoot, tree.name)
-			if err != nil {
-				panic(err)
-				return false
-			}
-			err = WriteIndexBlockToDiskByBlockID(index1, tree.name)
-			if err != nil {
-				panic(err)
-				return false
-			}
-			err = WriteIndexBlockToDiskByBlockID(index2, tree.name)
-			if err != nil {
-				panic(err)
-				return false
-			}
-			index = newRoot
-		} else {
+	for !index.isRoot() {
+		index_, err := ReadIndexBlockFromDiskByBlockID(index.parent, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		oldKey := tree.getIndexKeyByOffsetID(index.id, index_)
+		if oldKey < key {
+			index_.Delete(oldKey)
+			index_.Put(key, index.id)
+		}
+		if index.isFull() {
+			index1, index2 := SplitIndexNodeBlock(index, tree.name)
 			err := WriteIndexBlockToDiskByBlockID(
 				index1,
 				tree.name,
@@ -241,21 +244,99 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 			if err != nil {
 				return false
 			}
-			index_, err := ReadIndexBlockFromDiskByBlockID(index1.parent, tree.name)
-			if err != nil {
-				panic(err)
-				return false
-			}
+			// remove old index which point to node before spilt
+			oldKey := tree.getIndexKeyByOffsetID(index1.id, index_)
+			index_.Delete(oldKey)
 			index_.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
 			index_.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
-			err = WriteIndexBlockToDiskByBlockID(index_, tree.name)
-			if err != nil {
-				panic(err)
-				return false
-			}
-			index = index_
 		}
+		err = WriteIndexBlockToDiskByBlockID(index_, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		index = index_
 	}
+	if index.isFull() {
+		index1, index2 := SplitIndexNodeBlock(index, tree.name)
+		newRoot := NewIndexBlock(NextIndexNodeBlockID(tree.name), 0, -1, 0, make([]*KI, 0))
+		index1.parent = newRoot.id
+		index2.parent = newRoot.id
+		newRoot.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
+		newRoot.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
+		tree.setRootNode(newRoot)
+		err := WriteIndexBlockToDiskByBlockID(newRoot, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		err = WriteIndexBlockToDiskByBlockID(index1, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		err = WriteIndexBlockToDiskByBlockID(index2, tree.name)
+		if err != nil {
+			panic(err)
+			return false
+		}
+		index = newRoot
+	}
+	//for index.isFull() {
+	//	index1, index2 := SplitIndexNodeBlock(index, tree.name)
+	//	if index.isRoot() {
+	//		newRoot := NewIndexBlock(NextIndexNodeBlockID(tree.name), 0, -1, 0, make([]*KI, 0))
+	//		index1.parent = newRoot.id
+	//		index2.parent = newRoot.id
+	//		newRoot.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
+	//		newRoot.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
+	//		tree.setRootNode(newRoot)
+	//		err := WriteIndexBlockToDiskByBlockID(newRoot, tree.name)
+	//		if err != nil {
+	//			panic(err)
+	//			return false
+	//		}
+	//		err = WriteIndexBlockToDiskByBlockID(index1, tree.name)
+	//		if err != nil {
+	//			panic(err)
+	//			return false
+	//		}
+	//		err = WriteIndexBlockToDiskByBlockID(index2, tree.name)
+	//		if err != nil {
+	//			panic(err)
+	//			return false
+	//		}
+	//		index = newRoot
+	//	} else {
+	//		err := WriteIndexBlockToDiskByBlockID(
+	//			index1,
+	//			tree.name,
+	//		)
+	//		if err != nil {
+	//			return false
+	//		}
+	//		err = WriteIndexBlockToDiskByBlockID(
+	//			index2,
+	//			tree.name,
+	//		)
+	//		if err != nil {
+	//			return false
+	//		}
+	//		index_, err := ReadIndexBlockFromDiskByBlockID(index1.parent, tree.name)
+	//		if err != nil {
+	//			panic(err)
+	//			return false
+	//		}
+	//		index_.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
+	//		index_.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
+	//		err = WriteIndexBlockToDiskByBlockID(index_, tree.name)
+	//		if err != nil {
+	//			panic(err)
+	//			return false
+	//		}
+	//		index = index_
+	//	}
+	//}
 	return true
 }
 
@@ -274,4 +355,13 @@ func getRootNode(tableName string) int64 {
 		panic(err)
 	}
 	return index.parent
+}
+
+func (tree *BPTree) getIndexKeyByOffsetID(offset int64, index *IndexBlock) int64 {
+	for _, ki := range index.KIs {
+		if ki.Index == offset {
+			return ki.Key
+		}
+	}
+	return -1
 }
