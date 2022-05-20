@@ -83,7 +83,9 @@ func (tree *BPTree) QueryAll() []*KV {
 
 func (tree *BPTree) Insert(key int64, value []byte) bool {
 	cursor := tree.root
-	if cursor.isLeafIndex() {
+	// empty index
+	// so data will be put in first leaf block
+	if cursor.childrenSize == 0 {
 		// has no any index
 		leaf, err := ReadLeafBlockFromDiskByBlockID(0, tree.name)
 		if err != nil {
@@ -172,6 +174,11 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 		}
 		tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf1.id, index)
 		tree.insertIntoIndexNodeAndWrite(leaf2.maxKey, leaf2.id, index)
+		if index.isRoot() {
+			// root node always stay in memory
+			// must update it at once if its block message change
+			tree.root = index
+		}
 		return true
 	} else {
 		err := WriteLeafBlockToDiskByBlockID(leaf, tree.name)
@@ -183,6 +190,7 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 	}
 }
 
+//TODO 调整索引 使得maxKey更新的时候会更新索引
 func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index *IndexBlock) bool {
 	ok := index.Put(key, blockID)
 	if !ok {

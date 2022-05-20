@@ -339,9 +339,10 @@ func SplitLeafNodeBlock(leaf *LeafBlock, tableName string) (*LeafBlock, *LeafBlo
 	}
 	newLeaf.maxKey = leaf.maxKey
 	leaf.maxKey = leaf.KVs[bound-1].Key
-	newLeaf.KVs = newLeafKVS
 	newLeaf.kvsSize = leaf.kvsSize - bound
 	leaf.kvsSize = bound
+	newLeaf.KVs = newLeafKVS[:newLeaf.kvsSize]
+	leaf.KVs = leaf.KVs[:bound]
 	return leaf, newLeaf
 }
 
