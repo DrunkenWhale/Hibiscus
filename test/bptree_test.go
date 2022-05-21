@@ -27,12 +27,12 @@ func TestBPTree_Insert(t *testing.T) {
 func TestBPTree_Query(t *testing.T) {
 	tree := disk.NewBPTree("test")
 
-	for i := 0; i < 1145; i++ {
-		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
-		if !ok {
-			t.Log(i)
-		}
-	}
+	//for i := 0; i < 1145; i++ {
+	//	ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+	//	if !ok {
+	//		t.Log(i)
+	//	}
+	//}
 
 	// bug: 内存中的根节点和磁盘上的不一致
 	// 显然 内存中的是正确的 但磁盘上并不是
@@ -48,13 +48,16 @@ func TestBPTree_Query(t *testing.T) {
 	return
 }
 
+// 基本确定是index分块的时候炸了
+// 另外
+// 内存中的根节点和磁盘中的不同步
+// 记得排查
+// 现在同步了 因为更新父节点时候没有及时更新根节点
 func TestBPTree_QueryAll(t *testing.T) {
 	tree := disk.NewBPTree("test")
-	for _, i := range rand.Perm(5000) {
-		if i == 3392 {
-			fmt.Println(1)
-		}
-		tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+	for _, i := range rand.Perm(2000) {
+		fmt.Println(tree.Query(int64(i)))
+		//tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 	}
 	for _, kv := range tree.QueryAll() {
 		t.Log(kv.Key, string(kv.Value))

@@ -6,7 +6,7 @@ const (
 	blockSize = 4096 / 8
 
 	fillByte      = 2
-	byteSep       = 3
+	byteSep       = 32
 	byteSepString = string(rune(byteSep))
 )
 

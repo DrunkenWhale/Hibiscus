@@ -161,6 +161,8 @@ func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
 	return left
 }
 
+// bug
+// 向上更新的时候会有问题
 func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *LeafBlock) bool {
 	// 记录未更新的节点中的最大值
 	oldMaxKey := leaf.maxKey
@@ -190,6 +192,7 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 			return false
 		}
 		// 从磁盘读取节点的索引节点的ID
+		// 这样读取有问题
 		index, err := ReadIndexBlockFromDiskByBlockID(leaf.parentIndex, tree.name)
 		if err != nil {
 			panic(err)
@@ -208,8 +211,6 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 			panic(err)
 			return false
 		}
-		// 写的恶心人的弱智方法
-		// 有勇无谋
 		// 用于插入索引
 		tree.insertIntoIndexNodeAndWrite(leaf1.maxKey, leaf1.id, index)
 		tree.insertIntoIndexNodeAndWrite(leaf2.maxKey, leaf2.id, index)
@@ -219,6 +220,7 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 			// root node always stay in memory
 			// must update it at once if its block message change
 			tree.root = index
+
 		}
 		return true
 	} else {
@@ -293,6 +295,38 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 			index_.Delete(oldKey)
 			index_.Put(index1.KIs[index1.childrenSize-1].Key, index1.id)
 			index_.Put(index2.KIs[index2.childrenSize-1].Key, index2.id)
+
+			//更新子节点
+			if index.isLeafIndex() {
+				for _, ki := range index2.KIs {
+					needUpdateLeaf, err := ReadLeafBlockFromDiskByBlockID(ki.Index, tree.name)
+					if err != nil {
+						panic(err)
+						return false
+					}
+					needUpdateLeaf.parentIndex = index2.id
+					err = WriteLeafBlockToDiskByBlockID(needUpdateLeaf, tree.name)
+					if err != nil {
+						panic(err)
+						return false
+					}
+				}
+			} else {
+				for _, ki := range index2.KIs {
+					needUpdateIndex, err := ReadIndexBlockFromDiskByBlockID(ki.Index, tree.name)
+					if err != nil {
+						panic(err)
+						return false
+					}
+					needUpdateIndex.parent = index2.id
+					err = WriteIndexBlockToDiskByBlockID(needUpdateIndex, tree.name)
+					if err != nil {
+						panic(err)
+						return false
+					}
+				}
+			}
+
 		} else {
 			// 父亲索引节点没满
 			// 获取旧索引值
@@ -301,11 +335,15 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 			oldKey := tree.getIndexKeyByOffsetID(index.id, index_)
 			if oldKey < key {
 				if oldKey == -1 {
-					//break
-					panic(11)
+					panic("Illegal Block")
+					break
+				} else {
+					index_.Delete(oldKey)
+					index_.Put(key, index.id)
+					if index_.isRoot() {
+						tree.root = index_
+					}
 				}
-				index_.Delete(oldKey)
-				index_.Put(key, index.id)
 			}
 		}
 		// 刷写进入磁盘
@@ -338,6 +376,22 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 		if err != nil {
 			panic(err)
 			return false
+		}
+		//更新子节点
+		if index.isLeafIndex() {
+			for _, ki := range index2.KIs {
+				needUpdateLeaf, err := ReadLeafBlockFromDiskByBlockID(ki.Index, tree.name)
+				if err != nil {
+					panic(err)
+					return false
+				}
+				needUpdateLeaf.parentIndex = index2.id
+				err = WriteLeafBlockToDiskByBlockID(needUpdateLeaf, tree.name)
+				if err != nil {
+					panic(err)
+					return false
+				}
+			}
 		}
 		index = newRoot
 	}
