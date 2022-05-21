@@ -27,17 +27,13 @@ func TestBPTree_Insert(t *testing.T) {
 func TestBPTree_Query(t *testing.T) {
 	tree := disk.NewBPTree("test")
 
-	//for i := 0; i < 1145; i++ {
+	//for i := 0; i < 2000; i++ {
 	//	ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 	//	if !ok {
 	//		t.Log(i)
 	//	}
 	//}
-
-	// bug: 内存中的根节点和磁盘上的不一致
-	// 显然 内存中的是正确的 但磁盘上并不是
-	// 顺带一提 顺序写入会炸 但是非顺序居然不会
-	for _, i := range rand.Perm(500) {
+	for _, i := range rand.Perm(2000) {
 		ok, res := tree.Query(int64(i))
 		if !ok {
 			t.Error("can't find key " + strconv.Itoa(i))
@@ -55,9 +51,12 @@ func TestBPTree_Query(t *testing.T) {
 // 现在同步了 因为更新父节点时候没有及时更新根节点
 func TestBPTree_QueryAll(t *testing.T) {
 	tree := disk.NewBPTree("test")
-	for _, i := range rand.Perm(2000) {
-		fmt.Println(tree.Query(int64(i)))
-		//tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+	for _, i := range rand.Perm(4000) {
+		//fmt.Println(tree.Query(int64(i)))
+		if i == 850 {
+			fmt.Println(1)
+		}
+		tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 	}
 	for _, kv := range tree.QueryAll() {
 		t.Log(kv.Key, string(kv.Value))

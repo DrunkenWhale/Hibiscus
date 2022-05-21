@@ -2,6 +2,7 @@ package disk
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -193,6 +194,9 @@ func (index *IndexBlock) Delete(key int64) bool {
 }
 
 func WriteIndexBlockToDiskByBlockID(index *IndexBlock, tableName string) error {
+	if index.id == 3 && index.childrenSize == 6 {
+		fmt.Println(1)
+	}
 	file, err := os.OpenFile(indexNodeDataStoragePrefix+tableName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)

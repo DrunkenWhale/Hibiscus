@@ -249,7 +249,7 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 	}
 }
 
-//TODO 分裂之后 子节点指向的parent也要修改
+//TODO
 func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index *IndexBlock) bool {
 	// 向索引中添加数据
 	ok := index.Put(key, blockID)
@@ -353,6 +353,9 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 			return false
 		}
 		index = index_
+		if index_.isRoot() {
+			tree.root = index_
+		}
 	}
 	if index.isFull() {
 		index1, index2 := SplitIndexNodeBlock(index, tree.name)
@@ -387,6 +390,20 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 				}
 				needUpdateLeaf.parentIndex = index2.id
 				err = WriteLeafBlockToDiskByBlockID(needUpdateLeaf, tree.name)
+				if err != nil {
+					panic(err)
+					return false
+				}
+			}
+		} else {
+			for _, ki := range index2.KIs {
+				needUpdateIndex, err := ReadIndexBlockFromDiskByBlockID(ki.Index, tree.name)
+				if err != nil {
+					panic(err)
+					return false
+				}
+				needUpdateIndex.parent = index2.id
+				err = WriteIndexBlockToDiskByBlockID(needUpdateIndex, tree.name)
 				if err != nil {
 					panic(err)
 					return false
