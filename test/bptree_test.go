@@ -26,13 +26,6 @@ func TestBPTree_Insert(t *testing.T) {
 
 func TestBPTree_Query(t *testing.T) {
 	tree := disk.NewBPTree("test")
-
-	//for i := 0; i < 2000; i++ {
-	//	ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
-	//	if !ok {
-	//		t.Log(i)
-	//	}
-	//}
 	for _, i := range rand.Perm(2000) {
 		ok, res := tree.Query(int64(i))
 		if !ok {
@@ -44,17 +37,8 @@ func TestBPTree_Query(t *testing.T) {
 	return
 }
 
-// 基本确定是index分块的时候炸了
-// 另外
-// 内存中的根节点和磁盘中的不同步
-// 记得排查
-// 现在同步了 因为更新父节点时候没有及时更新根节点
 func TestBPTree_QueryAll(t *testing.T) {
 	tree := disk.NewBPTree("test")
-	for _, i := range rand.Perm(4000) {
-		//fmt.Println(tree.Query(int64(i)))
-		tree.Insert(int64(i), []byte(strconv.Itoa(i)))
-	}
 	for _, kv := range tree.QueryAll() {
 		t.Log(kv.Key, string(kv.Value))
 	}

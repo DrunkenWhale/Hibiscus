@@ -11,7 +11,7 @@ func TestNextBlockID(t *testing.T) {
 }
 
 func TestWriteLeafBlockToDiskByBlockID(t *testing.T) {
-	leaf := disk.NewLeafBlock(0, 77, -1, 3, []*disk.KV{
+	leaf := disk.NewLeafBlock(0, 77, -1, 27, []*disk.KV{
 		disk.NewKV(114, []byte("514")),
 		disk.NewKV(514, []byte("114")),
 		disk.NewKV(114514, []byte("1919810")),
@@ -47,7 +47,7 @@ func TestWriteLeafBlockToDiskByBlockID(t *testing.T) {
 }
 
 func TestReadLeafBlockFromDiskByBlockID(t *testing.T) {
-	leaf, err := disk.ReadLeafBlockFromDiskByBlockID(1, "test")
+	leaf, err := disk.ReadLeafBlockFromDiskByBlockID(0, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
