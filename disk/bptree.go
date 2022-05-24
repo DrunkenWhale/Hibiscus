@@ -63,7 +63,11 @@ func (tree *BPTree) Query(key int64) (bool, []byte) {
 	if !ok {
 		return false, nil
 	} else {
-		return true, res
+		if checkValueIsEqualDeleteMark(res) {
+			return false, nil
+		} else {
+			return true, res
+		}
 	}
 }
 
@@ -75,37 +79,26 @@ func (tree *BPTree) QueryAll() []*KV {
 		if err != nil {
 			panic(err)
 		}
-		res = append(res, leaf.KVs...)
+		for _, kv := range leaf.KVs {
+			if !checkValueIsEqualDeleteMark(kv.Value) {
+				res = append(res, kv)
+			}
+		}
 		nextBoundID = leaf.nextBlockID
 	}
 	return res
 }
 
 func (tree *BPTree) Insert(key int64, value []byte) bool {
-	// 从根节点开始向下查找
-	cursor := tree.root
-	// empty index
-	// so data will be put in first leaf block
-	// 当前是根节点且没有子节点的时候
-	// 直接插入且不用建立索引
-	if cursor.childrenSize == 0 {
-		// has no any index
-		// 这时候块0必定空闲
-		// 所以从块0插入数据
-		leaf, err := ReadLeafBlockFromDiskByBlockID(0, tree.name)
-		if err != nil {
-			panic(err)
-			return false
-		}
-		// 插入叶子结点的入口方法
-		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
+	return tree.insertMethodImplement(key, value)
+}
 
-	} else {
-		// 查找对应的叶子结点
-		leaf := tree.searchLeafNode(key)
+func (tree *BPTree) Delete(key int64) bool {
+	return tree.insertMethodImplement(key, deleteOperationMarkBytes)
+}
 
-		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
-	}
+func (tree *BPTree) Update(key int64, value []byte) bool {
+	return tree.insertMethodImplement(key, value)
 }
 
 func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
@@ -141,28 +134,34 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	return leaf
 }
 
-func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
-	if len(index.KIs) == 0 {
-		return -1
-	}
-	left := int64(0)
-	right := index.childrenSize
-	for left < right {
-		mid := (left + right) >> 1
-		if index.KIs[mid].Key < key {
-			left = mid + 1
-		} else {
-			right = mid
+func (tree *BPTree) insertMethodImplement(key int64, value []byte) bool {
+	// 从根节点开始向下查找
+	cursor := tree.root
+	// empty index
+	// so data will be put in first leaf block
+	// 当前是根节点且没有子节点的时候
+	// 直接插入且不用建立索引
+	if cursor.childrenSize == 0 {
+		// has no any index
+		// 这时候块0必定空闲
+		// 所以从块0插入数据
+		leaf, err := ReadLeafBlockFromDiskByBlockID(0, tree.name)
+		if err != nil {
+			panic(err)
+			return false
 		}
+		// 插入叶子结点的入口方法
+		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
+
+	} else {
+		// 查找对应的叶子结点
+		leaf := tree.searchLeafNode(key)
+
+		return tree.insertIntoLeafNodeAndWrite(key, value, leaf)
 	}
-	if left == int64(len(index.KIs)) {
-		return left - 1
-	}
-	return left
+	return false
 }
 
-// bug
-// 向上更新的时候会有问题
 func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *LeafBlock) bool {
 	// 记录未更新的节点中的最大值
 	oldMaxKey := leaf.maxKey
@@ -249,7 +248,6 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 	}
 }
 
-//TODO
 func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index *IndexBlock) bool {
 	// 向索引中添加数据
 	ok := index.Put(key, blockID)
@@ -423,6 +421,27 @@ func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
 	tree.root = newRootIndex
 }
 
+func (tree *BPTree) getIndexKeyByOffsetID(offset int64, index *IndexBlock) int64 {
+	for _, ki := range index.KIs {
+		if ki.Index == offset {
+			return ki.Key
+		}
+	}
+	return -1
+}
+
+func checkValueIsEqualDeleteMark(value []byte) bool {
+	if len(value) != len(deleteOperationMarkBytes) {
+		return false
+	}
+	for i := 0; i < len(value); i++ {
+		if value[i] != deleteOperationMarkBytes[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func getRootNode(tableName string) int64 {
 	index, err := ReadIndexBlockFromDiskByBlockID(0, tableName)
 	if err != nil {
@@ -431,11 +450,22 @@ func getRootNode(tableName string) int64 {
 	return index.parent
 }
 
-func (tree *BPTree) getIndexKeyByOffsetID(offset int64, index *IndexBlock) int64 {
-	for _, ki := range index.KIs {
-		if ki.Index == offset {
-			return ki.Key
+func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
+	if len(index.KIs) == 0 {
+		return -1
+	}
+	left := int64(0)
+	right := index.childrenSize
+	for left < right {
+		mid := (left + right) >> 1
+		if index.KIs[mid].Key < key {
+			left = mid + 1
+		} else {
+			right = mid
 		}
 	}
-	return -1
+	if left == int64(len(index.KIs)) {
+		return left - 1
+	}
+	return left
 }

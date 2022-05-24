@@ -8,7 +8,7 @@ import (
 
 const (
 	leafNodeBlockMaxSize      = 30
-	leafNodeDataStoragePrefix = "data/leaf_"
+	leafNodeDataStoragePrefix = storageDirectoryName + string(os.PathSeparator) + "leaf_"
 )
 
 type LeafBlock struct {
@@ -96,7 +96,9 @@ func (leaf *LeafBlock) Put(key int64, value []byte) bool {
 		leaf.KVs = append(leaf.KVs, NewKV(key, value))
 	} else if leaf.KVs[index].Key == key {
 		// key exist
-		return false
+		// update it
+		leaf.KVs[index] = NewKV(key, value)
+		return true
 	} else {
 		leaf.KVs = append(leaf.KVs, nil)
 		copy(leaf.KVs[index+1:], leaf.KVs[index:])

@@ -9,7 +9,7 @@ import (
 
 const (
 	indexChildrenMaxSize       = 50
-	indexNodeDataStoragePrefix = "data/index_"
+	indexNodeDataStoragePrefix = storageDirectoryName + string(os.PathSeparator) + "index_"
 )
 
 type IndexBlock struct {
