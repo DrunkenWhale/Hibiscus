@@ -44,6 +44,28 @@ func TestBPTree_QueryAll(t *testing.T) {
 	}
 }
 
+func TestBPTree_Delete(t *testing.T) {
+	tree := disk.NewBPTree("test")
+	for i := 0; i < 1145; i++ {
+		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
+		if !ok {
+			fmt.Println(i)
+		}
+	}
+	for _, i := range rand.Perm(2000) {
+		tree.Delete(int64(i))
+	}
+	tree.Insert(1134, []byte("may be you can find this"))
+	for _, i := range rand.Perm(2000) {
+		ok, res := tree.Query(int64(i))
+		if !ok {
+			t.Error("can't find key " + strconv.Itoa(i))
+		} else {
+			t.Log(i, string(res))
+		}
+	}
+}
+
 func TestBinarySearch(t *testing.T) {
 	arr := []int{1, 5, 6, 7, 8, 9, 17, 27, 37}
 	fmt.Println(arr[binarySearch(4, arr)])

@@ -108,11 +108,6 @@ func (tree *BPTree) Insert(key int64, value []byte) bool {
 	}
 }
 
-func (tree *BPTree) Delete(key int64) {
-	leaf := tree.searchLeafNode(key)
-	tree.deleteLeafNodeAndWrite(key, leaf)
-}
-
 func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	cursor := tree.root
 	// 游标不为叶子结点时
@@ -146,6 +141,28 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	return leaf
 }
 
+func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
+	if len(index.KIs) == 0 {
+		return -1
+	}
+	left := int64(0)
+	right := index.childrenSize
+	for left < right {
+		mid := (left + right) >> 1
+		if index.KIs[mid].Key < key {
+			left = mid + 1
+		} else {
+			right = mid
+		}
+	}
+	if left == int64(len(index.KIs)) {
+		return left - 1
+	}
+	return left
+}
+
+// bug
+// 向上更新的时候会有问题
 func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *LeafBlock) bool {
 	// 记录未更新的节点中的最大值
 	oldMaxKey := leaf.maxKey
@@ -232,6 +249,7 @@ func (tree *BPTree) insertIntoLeafNodeAndWrite(key int64, value []byte, leaf *Le
 	}
 }
 
+//TODO
 func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index *IndexBlock) bool {
 	// 向索引中添加数据
 	ok := index.Put(key, blockID)
@@ -396,55 +414,6 @@ func (tree *BPTree) insertIntoIndexNodeAndWrite(key int64, blockID int64, index 
 	return true
 }
 
-func (tree *BPTree) deleteLeafNodeAndWrite(key int64, leaf *LeafBlock) {
-	index, err := ReadIndexBlockFromDiskByBlockID(leaf.parentIndex, tree.name)
-	if err != nil {
-		panic(err)
-	}
-	leaf.Delete(key)
-	err = WriteLeafBlockToDiskByBlockID(leaf, tree.name)
-	if err != nil {
-		panic(err)
-	}
-	if leaf.kvsSize == 0 {
-		tree.deleteIndexNodeAndWrite(key, index)
-	}
-}
-
-func (tree *BPTree) deleteIndexNodeAndWrite(key int64, index *IndexBlock) {
-	if key == index.KIs[index.childrenSize-1].Key {
-		cursor := index
-		for !cursor.isRoot() {
-			ok := cursor.Delete(key)
-			if !ok {
-				return
-			}
-			cursor.Delete(key)
-			err := WriteIndexBlockToDiskByBlockID(index, tree.name)
-			if err != nil {
-				panic(err)
-			}
-			_index, err := ReadIndexBlockFromDiskByBlockID(cursor.parent, tree.name)
-			if err != nil {
-				panic(err)
-			}
-			cursor = _index
-		}
-		ok := cursor.Delete(key)
-		if !ok {
-			return
-		}
-		cursor.Delete(key)
-		err := WriteIndexBlockToDiskByBlockID(index, tree.name)
-		if err != nil {
-			panic(err)
-		}
-		tree.root = cursor
-	} else {
-		return
-	}
-}
-
 func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
 	root := NewIndexBlock(0, 0, newRootIndex.id, 0, make([]*KI, 0))
 	err := WriteIndexBlockToDiskByBlockID(root, tree.name)
@@ -452,15 +421,6 @@ func (tree *BPTree) setRootNode(newRootIndex *IndexBlock) {
 		panic(err)
 	}
 	tree.root = newRootIndex
-}
-
-func (tree *BPTree) getIndexKeyByOffsetID(offset int64, index *IndexBlock) int64 {
-	for _, ki := range index.KIs {
-		if ki.Index == offset {
-			return ki.Key
-		}
-	}
-	return -1
 }
 
 func getRootNode(tableName string) int64 {
@@ -471,22 +431,11 @@ func getRootNode(tableName string) int64 {
 	return index.parent
 }
 
-func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
-	if len(index.KIs) == 0 {
-		return -1
-	}
-	left := int64(0)
-	right := index.childrenSize
-	for left < right {
-		mid := (left + right) >> 1
-		if index.KIs[mid].Key < key {
-			left = mid + 1
-		} else {
-			right = mid
+func (tree *BPTree) getIndexKeyByOffsetID(offset int64, index *IndexBlock) int64 {
+	for _, ki := range index.KIs {
+		if ki.Index == offset {
+			return ki.Key
 		}
 	}
-	if left == int64(len(index.KIs)) {
-		return left - 1
-	}
-	return left
+	return -1
 }
