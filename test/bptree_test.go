@@ -60,8 +60,31 @@ func TestBPTree_Delete(t *testing.T) {
 	}
 }
 
-func TestBPTree_CRUD(t *testing.T) {
+func TestBPTree_CRUD1(t *testing.T) {
 	tree := disk.NewBPTree("test")
+	//tree.Insert(114514, []byte("1919810"))
+	tree.Insert(114514, []byte("1919810"))
+	t.Log(tree.QueryAll())
+	t.Log(tree.Query(114514))
+	t.Log(tree.Query(1145))
+	t.Log(tree.Delete(114514))
+	t.Log(tree.Query(114514))
+}
+func TestBPTree_CRUD2(t *testing.T) {
+	tree := disk.NewBPTree("test")
+	randomArray := rand.Perm(114514)
+	for i := 0; i < len(randomArray); i++ {
+		if randomArray[i]%2 == 0 {
+			//res := tree.Delete(rand.Int63())
+			//t.Logf("Delete :%v", res)
+		} else if randomArray[i]%3 == 0 {
+			res, err := tree.Query(rand.Int63())
+			t.Logf("Query :%v %v", res, err)
+		} else {
+			res := tree.Insert(rand.Int63(), []byte(strconv.Itoa(randomArray[i])))
+			t.Logf("Insert :%v", res)
+		}
+	}
 	//tree.Insert(114514, []byte("1919810"))
 	tree.Insert(114514, []byte("1919810"))
 	t.Log(tree.QueryAll())
