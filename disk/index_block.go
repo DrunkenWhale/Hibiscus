@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	indexChildrenMaxSize       = 50
+	indexChildrenMaxSize       = 50 * 32
 	indexNodeDataStoragePrefix = storageDirectoryName + string(os.PathSeparator) + "index_"
 )
 

@@ -3,7 +3,7 @@ package disk
 import "os"
 
 const (
-	blockSize = 4096 / 8
+	blockSize = 4096 * 4
 
 	fillByte             = 2
 	byteSep              = 3

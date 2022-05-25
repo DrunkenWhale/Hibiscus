@@ -122,8 +122,15 @@ func (tree *BPTree) searchLeafNode(key int64) *LeafBlock {
 	}
 	rightBound := searchRightBoundFromIndexNode(key, cursor)
 	if rightBound == -1 {
-		panic("there must be a bug!")
-		return nil
+		if cursor.isRoot() {
+			leaf, err := ReadLeafBlockFromDiskByBlockID(0, tree.name)
+			if err != nil {
+				return nil
+			}
+			return leaf
+		} else {
+			panic("Odd Bug!")
+		}
 	}
 	nextBoundID := cursor.KIs[rightBound].Index
 	leaf, err := ReadLeafBlockFromDiskByBlockID(nextBoundID, tree.name)
@@ -458,13 +465,14 @@ func searchRightBoundFromIndexNode(key int64, index *IndexBlock) int64 {
 	right := index.childrenSize
 	for left < right {
 		mid := (left + right) >> 1
-		if index.KIs[mid].Key < key {
-			left = mid + 1
-		} else {
+		if index.KIs[mid].Key >= key {
 			right = mid
+		} else {
+			left = mid + 1
 		}
 	}
-	if left == int64(len(index.KIs)) {
+
+	if left == int64(len(index.KIs)) && left != 0 {
 		return left - 1
 	}
 	return left

@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	leafNodeBlockMaxSize      = 30
+	leafNodeBlockMaxSize      = 30 * 32
 	leafNodeDataStoragePrefix = storageDirectoryName + string(os.PathSeparator) + "leaf_"
 )
 

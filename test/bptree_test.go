@@ -15,7 +15,7 @@ func TestNewBPTree(t *testing.T) {
 func TestBPTree_Insert(t *testing.T) {
 	tree := disk.NewBPTree("test")
 	tree.Insert(114, []byte("514"))
-	for i := 0; i < 1145; i++ {
+	for i := 0; i < 114514; i++ {
 		ok := tree.Insert(int64(i), []byte(strconv.Itoa(i)))
 		if !ok {
 			fmt.Println(i)
@@ -58,6 +58,17 @@ func TestBPTree_Delete(t *testing.T) {
 			t.Log(i, string(res))
 		}
 	}
+}
+
+func TestBPTree_CRUD(t *testing.T) {
+	tree := disk.NewBPTree("test")
+	//tree.Insert(114514, []byte("1919810"))
+	tree.Insert(114514, []byte("1919810"))
+	t.Log(tree.QueryAll())
+	t.Log(tree.Query(114514))
+	t.Log(tree.Query(1145))
+	t.Log(tree.Delete(114514))
+	t.Log(tree.Query(114514))
 }
 
 func TestBinarySearch(t *testing.T) {
